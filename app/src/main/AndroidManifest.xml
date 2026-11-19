@@ -25,6 +25,7 @@
         <activity android:name=".TerminalActivity" android:exported="false" />
         <activity android:name=".ai.ChatActivity" android:exported="false" />
         <activity android:name=".accounts.AccountsActivity" android:exported="false" />
+        <activity android:name=".mail.MailActivity" android:exported="false" />
         <activity android:name=".automations.AutomationsActivity" android:exported="false" />
     </application>
 </manifest>

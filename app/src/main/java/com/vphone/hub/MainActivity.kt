@@ -11,6 +11,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.vphone.hub.accounts.AccountsActivity
 import com.vphone.hub.ai.ChatActivity
 import com.vphone.hub.automations.AutomationsActivity
+import com.vphone.hub.mail.MailActivity
 
 class MainActivity : AppCompatActivity() {
     private lateinit var adapter: VmAdapter
@@ -38,6 +39,9 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.btnAutomations).setOnClickListener {
             startActivity(Intent(this, AutomationsActivity::class.java))
+        }
+        findViewById<View>(R.id.btnMail).setOnClickListener {
+            startActivity(Intent(this, MailActivity::class.java))
         }
     }
 

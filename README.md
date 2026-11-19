@@ -13,8 +13,9 @@
 - **Терминал** — встроенная shell-консоль (реальный `sh` на устройстве) — база для Termux-стиля работы с кодом.
 - **ИИ-ассистент** — чат через любой OpenAI-совместимый API (по умолчанию OpenRouter,
   модель Mistral). Ключ хранится локально в настройках приложения.
-- **Аккаунты и почта** — реестр подключённых аккаунтов (email/соцсети) + интерфейс
-  `MailClient` (IMAP/SMTP) для интеграции почты.
+- **Аккаунты и почта** — реестр подключённых аккаунтов (email/соцсети) + **реальная почта**:
+  экран «Почта» (JavaMail, `com.sun.mail:android-mail`) — входящие по IMAPS, отправка по
+  SMTP (STARTTLS, порт 587). Для Gmail/Яндекса используйте «пароль приложения».
 - **Автоматизации** — правила «имя + shell-команда + интервал в минутах», выполняются фоновым движком.
 - **Termux-движок** — запуск Linux-окружений (Debian/Alpine) через `proot-distro` внутри Termux.
 
@@ -30,7 +31,7 @@ app/src/main/java/com/vphone/hub/
 ├── engine/TermuxEngine             # адаптер запуска ОС через Termux (proot)
 ├── ai/AiClient + ChatActivity      # OpenAI-совместимый чат-клиент
 ├── accounts/AccountStore + AccountsActivity
-├── mail/MailClient                 # IMAP/SMTP-интерфейс (расширение)
+├── mail/MailClient + MailActivity  # реальный IMAP/SMTP (JavaMail)
 └── automations/AutomationEngine    # фоновый планировщик shell-правил
 ```
 
@@ -56,7 +57,6 @@ app/src/main/java/com/vphone/hub/
 
 ## Дорожная карта
 
-- Реальная IMAP/SMTP синхронизация почты (Jakarta Mail)
 - Просмотр/загрузка образов ВМ (Android-x86, QEMU-образы) и загрузчик
 - Синхронизация окружения «телефон → ВМ»: экспорт контактов/файлов/аккаунтов
 - Веб-дашборд управления ВМ с телефона
