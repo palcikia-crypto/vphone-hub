@@ -1,0 +1,8 @@
+<resources>
+    <string-array name="os_types">
+        <item>linux</item>
+        <item>custom</item>
+        <item>android</item>
+        <item>windows</item>
+    </string-array>
+</resources>

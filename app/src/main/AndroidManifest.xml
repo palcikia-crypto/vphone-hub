@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
+
+    <queries>
+        <package android:name="com.termux" />
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.VPhone">
+
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".VmCreateActivity" android:exported="false" />
+        <activity android:name=".VmDetailActivity" android:exported="false" />
+        <activity android:name=".TerminalActivity" android:exported="false" />
+        <activity android:name=".ai.ChatActivity" android:exported="false" />
+        <activity android:name=".accounts.AccountsActivity" android:exported="false" />
+        <activity android:name=".automations.AutomationsActivity" android:exported="false" />
+    </application>
+</manifest>

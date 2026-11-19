@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.VPhone" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:statusBarColor">@color/background</item>
+        <item name="colorPrimary">@color/accent</item>
+    </style>
+</resources>

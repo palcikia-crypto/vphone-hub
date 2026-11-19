@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Создание ВМ"
+            android:textColor="@color/text_primary"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/inputName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Название машины"
+            android:inputType="text"
+            android:textColor="@color/text_primary" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="12dp"
+            android:text="Тип ОС"
+            android:textColor="@color/text_secondary" />
+
+        <Spinner
+            android:id="@+id/spinnerOs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="4dp" />
+
+        <TextView
+            android:id="@+id/labelRam"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="12dp"
+            android:text="Память: 2048 МБ"
+            android:textColor="@color/text_primary" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderRam"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stepSize="256"
+            android:value="2048"
+            android:valueFrom="512"
+            android:valueTo="8192" />
+
+        <TextView
+            android:id="@+id/labelCpu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ядер: 2"
+            android:textColor="@color/text_primary" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderCpu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stepSize="1"
+            android:value="2"
+            android:valueFrom="1"
+            android:valueTo="8" />
+
+        <TextView
+            android:id="@+id/labelDisk"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Диск: 16 ГБ"
+            android:textColor="@color/text_primary" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderDisk"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stepSize="4"
+            android:value="16"
+            android:valueFrom="4"
+            android:valueTo="256" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCreate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Создать ВМ" />
+    </LinearLayout>
+</ScrollView>
