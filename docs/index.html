@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VPhone Hub — веб-панель виртуального телефона</title>
+<style>
+  :root{
+    --bg:#0B0E14; --panel:#12161F; --card:#151A26; --accent:#7C6CFF;
+    --text:#EDEBFF; --muted:#9AA0B5; --ok:#4ADE80; --warn:#F87171;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; font-family:'Segoe UI',Roboto,Arial,sans-serif}
+  body{background:var(--bg); color:var(--text); min-height:100vh}
+  header{display:flex; align-items:center; gap:12px; padding:14px 22px; border-bottom:1px solid #1d2230}
+  header h1{font-size:20px}
+  header .sub{color:var(--muted); font-size:13px}
+  header a{margin-left:auto; color:var(--accent); text-decoration:none; font-size:14px}
+  .layout{display:flex; gap:28px; padding:24px; flex-wrap:wrap; justify-content:center}
+  .phone-frame{width:360px; height:720px; background:#0e1118; border:6px solid #1d2230;
+    border-radius:30px; position:relative; overflow:hidden; flex-shrink:0}
+  .statusbar{display:flex; justify-content:space-between; padding:6px 14px; font-size:12px;
+    color:var(--muted); background:#0e1118; position:absolute; top:0; left:0; right:0; z-index:5}
+  .screens{position:absolute; inset:0; top:24px; bottom:52px}
+  .screen{display:none; overflow-y:auto; height:100%; padding:10px 12px}
+  .screen.active{display:block}
+  .dock{position:absolute; bottom:0; left:0; right:0; height:52px; display:flex;
+    align-items:center; justify-content:center; background:#0e1118; border-top:1px solid #1d2230}
+  .dock button{width:120px; height:6px; border:none; border-radius:3px; background:#2c3242; cursor:pointer}
+  .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; padding:22px 6px}
+  .app{display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;
+    background:var(--card); border-radius:16px; padding:14px 4px; transition:.15s}
+  .app:hover{transform:translateY(-2px); border:1px solid var(--accent)}
+  .app .ico{font-size:30px}
+  .app .lbl{font-size:12px; color:var(--muted); text-align:center}
+  .home-title{text-align:center; padding:8px 0 2px; font-size:15px; color:var(--muted)}
+  .screen h2{font-size:16px; margin-bottom:10px; display:flex; align-items:center; gap:8px}
+  .back{background:none; border:1px solid #2c3242; color:var(--muted); border-radius:8px;
+    padding:2px 10px; cursor:pointer; font-size:12px}
+  .card{background:var(--card); border-radius:12px; padding:10px 12px; margin-bottom:8px; font-size:14px}
+  .card .t{font-weight:600}
+  .card .s{color:var(--muted); font-size:12px; margin-top:3px; word-break:break-all}
+  .card .row{display:flex; justify-content:space-between; align-items:center; gap:8px}
+  .btn{background:var(--accent); color:#fff; border:none; border-radius:8px; padding:7px 14px;
+    cursor:pointer; font-size:13px}
+  .btn.ghost{background:transparent; border:1px solid #2c3242; color:var(--text)}
+  .btn.danger{background:transparent; border:1px solid #3a2230; color:var(--warn)}
+  .btn.sm{padding:4px 10px; font-size:12px}
+  input, select{background:#0e1118; border:1px solid #2c3242; color:var(--text); border-radius:8px;
+    padding:8px 10px; font-size:13px; width:100%}
+  label{font-size:12px; color:var(--muted); display:block; margin:8px 0 4px}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .term{background:#06080D; color:#C9F0D0; font-family:ui-monospace,Consolas,monospace;
+    font-size:12.5px; height:430px; overflow-y:auto; padding:10px; border-radius:10px; white-space:pre-wrap}
+  .termrow{display:flex; gap:6px; margin-top:8px}
+  .badge{font-size:11px; padding:2px 8px; border-radius:10px; background:#1d2230; color:var(--muted)}
+  .badge.on{color:var(--ok)}
+  .chat{height:380px; overflow-y:auto; padding:6px}
+  .msg{background:var(--card); border-radius:12px; padding:8px 10px; margin-bottom:6px;
+    font-size:13.5px; max-width:92%}
+  .msg.me{margin-left:auto; background:#232045}
+  .warnbox{border:1px solid #3a2a12; background:#171208; color:#E8C172; border-radius:10px;
+    padding:8px 10px; font-size:12px; margin-bottom:10px}
+  .info{max-width:420px; color:var(--muted); font-size:14px; line-height:1.55}
+  .info h3{color:var(--text); font-size:15px; margin:16px 0 6px}
+  .info ul{margin-left:18px}
+  .info a{color:var(--accent)}
+  footer{padding:14px 22px; color:#4b5165; font-size:12px; border-top:1px solid #1d2230}
+</style>
+</head>
+<body>
+<header>
+  <h1>VPhone Hub</h1>
+  <span class="sub">веб-панель виртуального телефона</span>
+  <a href="https://github.com/palcikia-crypto/vphone-hub">Репозиторий →</a>
+</header>
+
+<div class="layout">
+  <div class="phone-frame">
+    <div class="statusbar"><span id="clock">--:--</span><span>🔋 98% · 5G ▂▄▆</span></div>
+    <div class="screens">
+
+      <div id="screen-home" class="screen active">
+        <div class="home-title">VPhone Hub · главное</div>
+        <div class="grid">
+          <div class="app" onclick="show('vm')"><div class="ico">🖥</div><div class="lbl">Виртуальные машины</div></div>
+          <div class="app" onclick="show('term')"><div class="ico">⌨️</div><div class="lbl">Терминал</div></div>
+          <div class="app" onclick="show('ai')"><div class="ico">🤖</div><div class="lbl">ИИ-ассистент</div></div>
+          <div class="app" onclick="show('acc')"><div class="ico">👤</div><div class="lbl">Аккаунты</div></div>
+          <div class="app" onclick="show('auto')"><div class="ico">⚡</div><div class="lbl">Автоматизации</div></div>
+          <div class="app" onclick="show('about')"><div class="ico">⚙️</div><div class="lbl">О системе</div></div>
+        </div>
+      </div>
+
+      <div id="screen-vm" class="screen">
+        <h2>🖥 Виртуальные машины <button class="back" onclick="show('home')">←</button></h2>
+        <div class="warnbox">Браузер не может запустить реальную ОС — здесь управление профилями и демонстрация. Полный запуск — в Android-приложении (Termux-движок).</div>
+        <div id="vmlist"></div>
+        <h2 style="margin-top:14px">Новая ВМ</h2>
+        <label>Название</label>
+        <input id="vmName" placeholder="VPhone-01">
+        <div class="grid2">
+          <div><label>Тип ОС</label>
+            <select id="vmOs"><option>linux</option><option>custom</option><option>android</option><option>windows</option></select></div>
+          <div><label>RAM, МБ (до 8192)</label>
+            <input id="vmRam" type="number" value="4096" min="512" max="8192" step="256"></div>
+          <div><label>Ядер (1–8)</label>
+            <input id="vmCpu" type="number" value="4" min="1" max="8"></div>
+          <div><label>Диск, ГБ (4–256)</label>
+            <input id="vmDisk" type="number" value="64" min="4" max="256"></div>
+        </div>
+        <div style="margin-top:10px"><button class="btn" onclick="createVm()">Создать ВМ</button></div>
+      </div>
+
+      <div id="screen-term" class="screen">
+        <h2>⌨️ Терминал <span class="badge">демо-shell</span> <button class="back" onclick="show('home')">←</button></h2>
+        <div class="term" id="termOut">VPhone Shell (демо). Наберите `help`.
+</div>
+        <div class="termrow">
+          <input id="termIn" placeholder="команда…" style="font-family:ui-monospace,monospace" onkeydown="if(event.key==='Enter')runTerm()">
+          <button class="btn" onclick="runTerm()">▶</button>
+        </div>
+      </div>
+
+      <div id="screen-ai" class="screen">
+        <h2>🤖 ИИ-ассистент <button class="back" onclick="show('home')">←</button></h2>
+        <div class="grid2">
+          <input id="aiKey" placeholder="API-ключ (OpenRouter)">
+          <input id="aiModel" placeholder="модель" value="mistralai/mistral-small-latest">
+        </div>
+        <div class="chat" id="chatBox"></div>
+        <div class="termrow">
+          <input id="aiIn" placeholder="спросите ИИ…" onkeydown="if(event.key==='Enter')aiSend()">
+          <button class="btn" onclick="aiSend()">➤</button>
+        </div>
+      </div>
+
+      <div id="screen-acc" class="screen">
+        <h2>👤 Аккаунты и почта <button class="back" onclick="show('home')">←</button></h2>
+        <div id="accList"></div>
+        <label>Тип</label><input id="accType" placeholder="email / соцсеть / другое">
+        <label>Название</label><input id="accLabel" placeholder="Личная почта">
+        <label>Логин / email</label><input id="accLogin" placeholder="you@mail.com">
+        <div style="margin-top:10px"><button class="btn" onclick="addAcc()">Подключить</button></div>
+      </div>
+
+      <div id="screen-auto" class="screen">
+        <h2>⚡ Автоматизации <button class="back" onclick="show('home')">←</button></h2>
+        <div class="warnbox">Правила выполняет Android-приложение на телефоне; в веб-панели — планировщик-план.</div>
+        <div id="autoList"></div>
+        <label>Название</label><input id="autoName" placeholder="Бэкап ночами">
+        <label>Команда</label><input id="autoCmd" placeholder="sh backup.sh" style="font-family:ui-monospace,monospace">
+        <label>Интервал, минут</label><input id="autoMin" type="number" value="60" min="1">
+        <div style="margin-top:10px"><button class="btn" onclick="addAuto()">Создать</button></div>
+      </div>
+
+      <div id="screen-about" class="screen">
+        <h2>⚙️ О системе <button class="back" onclick="show('home')">←</button></h2>
+        <div class="card"><div class="t">VPhone Hub Web · v0.1</div>
+          <div class="s">Веб-панель проекта «виртуальный телефон»: управление профилями ВМ, демо-терминал, ИИ-чат, аккаунты, автоматизации.</div></div>
+        <div class="card"><div class="t">Реальный запуск ОС</div>
+          <div class="s">Android-приложение из <a href="https://github.com/palcikia-crypto/vphone-hub" style="color:var(--accent)">репозитория</a> запускает Debian/Alpine через Termux (proot-distro). Android-в-Android и Windows — только с root/виртуализацией или через медленную QEMU-эмуляцию.</div></div>
+        <div class="card"><div class="t">Приватность</div>
+          <div class="s">Все данные (ВМ, аккаунты, ключ ИИ) хранятся только в localStorage вашего браузера и никуда не отправляются, кроме запросов к выбранному ИИ-API.</div></div>
+      </div>
+
+    </div>
+    <div class="dock"><button onclick="show('home')" aria-label="Домой"></button></div>
+  </div>
+
+  <div class="info">
+    <h3>Что это</h3>
+    Веб-панель проекта VPhone Hub — «виртуальный телефон» в браузере: интерфейс,
+    похожий на Android-лаунчер, менеджер виртуальных машин и инструменты.
+    <h3>Возможности</h3>
+    <ul>
+      <li>Создание ВМ: тип ОС, RAM до 8 ГБ, ядра, диск</li>
+      <li>Демо-shell: команды help, vm list, vm start, sysinfo…</li>
+      <li>ИИ-чат через OpenAI-совместимый API (ключ — только локально)</li>
+      <li>Аккаунты и почта — реестр подключений</li>
+      <li>Автоматизации — правила «команда + интервал»</li>
+    </ul>
+    <h3>Ограничения браузера</h3>
+    Полноценная ОС (Android/Windows) внутри вкладки браузера невозможна — нет
+    доступа к виртуализации. Настоящий запуск — Android-приложение из репозитория.
+    <h3>Данные</h3>
+    ВМ, аккаунты и ключи хранятся в localStorage этого браузера.
+  </div>
+</div>
+
+<footer>VPhone Hub · <a href="https://github.com/palcikia-crypto/vphone-hub" style="color:var(--accent)">github.com/palcikia-crypto/vphone-hub</a> · Pages build</footer>
+
+<script>
+"use strict";
+var $ = function(id){ return document.getElementById(id); };
+
+function show(name){
+  document.querySelectorAll(".screen").forEach(function(s){ s.classList.remove("active"); });
+  var el = $("screen-" + name);
+  if (el) el.classList.add("active");
+  if (name === "vm") renderVms();
+  if (name === "acc") renderAccs();
+  if (name === "auto") renderAutos();
+  if (name === "term") $("termIn").focus();
+}
+
+setInterval(function(){
+  var d = new Date();
+  $("clock").textContent = ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);
+}, 1000);
+
+function load(k, def){
+  try { var v = JSON.parse(localStorage.getItem(k)); return v === null ? def : v; }
+  catch(e){ return def; }
+}
+function save(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
+
+/* ---------- VM ---------- */
+var vms = load("vp_vms", [{
+  id:"seed-1", name:"VPhone-01", osType:"linux", ramMb:4096, cpuCores:4, diskGb:64, running:false
+}]);
+
+function renderVms(){
+  var box = $("vmlist"); box.innerHTML = "";
+  if (!vms.length) box.innerHTML = '<div class="card"><div class="s">ВМ пока нет — создайте первую ниже.</div></div>';
+  vms.forEach(function(v, i){
+    var el = document.createElement("div");
+    el.className = "card";
+    el.innerHTML =
+      '<div class="row"><div><div class="t">'+v.name+'</div>'+
+      '<div class="s">'+v.osType+' · '+v.ramMb+' МБ · '+v.cpuCores+' CPU · '+v.diskGb+' ГБ</div></div>'+
+      '<span class="badge'+(v.running?' on':'')+'">'+(v.running?'● запущена':'○ выключена')+'</span></div>'+
+      '<div class="row" style="margin-top:8px">'+
+      '<button class="btn sm ghost" onclick="toggleVm('+i+')">'+(v.running?'Остановить':'Запустить')+'</button>'+
+      '<button class="btn sm danger" onclick="delVm('+i+')">Удалить</button></div>';
+    box.appendChild(el);
+  });
+}
+function createVm(){
+  var name = $("vmName").value.trim() || ("VPhone-0"+(vms.length+1));
+  var ram = Math.min(8192, Math.max(512, parseInt($("vmRam").value||"4096")));
+  var cpu = Math.min(8, Math.max(1, parseInt($("vmCpu").value||"2")));
+  var disk = Math.min(256, Math.max(4, parseInt($("vmDisk").value||"16")));
+  vms.push({ id:String(Date.now()), name:name, osType:$("vmOs").value,
+    ramMb:ram, cpuCores:cpu, diskGb:disk, running:false });
+  save("vp_vms", vms);
+  $("vmName").value = "";
+  renderVms();
+  termPrint("\n[vphone] ВМ «"+name+"» создана: "+ram+" МБ, "+cpu+" CPU, "+disk+" ГБ.");
+}
+function toggleVm(i){
+  vms[i].running = !vms[i].running; save("vp_vms", vms); renderVms();
+  termPrint("\n[vphone] ВМ «"+vms[i].name+"» "+(vms[i].running?"запущена":"остановлена")+
+    " (в браузере — симуляция; реальный запуск в приложении).");
+}
+function delVm(i){ vms.splice(i,1); save("vp_vms", vms); renderVms(); }
+
+/* ---------- Terminal (демо) ---------- */
+function termPrint(t){ $("termOut").textContent += t; $("termOut").scrollTop = 1e9; }
+function runTerm(){
+  var raw = $("termIn").value.trim(); if (!raw) return;
+  $("termIn").value = "";
+  termPrint("\n$ " + raw);
+  var parts = raw.split(/\s+/), cmd = parts[0];
+  if (cmd === "help") {
+    termPrint("\nКоманды: help, ls, vm list, vm start <n>, vm stop <n>, sysinfo, date, echo <текст>, clear");
+  } else if (cmd === "ls") {
+    termPrint("\napp/  docs/  termux-scripts/  README.md");
+  } else if (cmd === "vm" && parts[1] === "list") {
+    if (!vms.length) termPrint("\nВМ нет.");
+    vms.forEach(function(v,i){ termPrint("\n["+(i+1)+"] "+v.name+" · "+v.osType+" · "+v.ramMb+" МБ · "+(v.running?"running":"stopped")); });
+  } else if (cmd === "vm" && parts[1] === "start" && vms[parseInt(parts[2])-1]) {
+    vms[parseInt(parts[2])-1].running = true; save("vp_vms", vms);
+    termPrint("\nВМ запущена (демо).");
+  } else if (cmd === "vm" && parts[1] === "stop" && vms[parseInt(parts[2])-1]) {
+    vms[parseInt(parts[2])-1].running = false; save("vp_vms", vms);
+    termPrint("\nВМ остановлена.");
+  } else if (cmd === "sysinfo") {
+    termPrint("\nVPhone Hub Web v0.1 · демо-shell · localStorage: "+(JSON.stringify(vms).length)+" байт профилей\nРеальная ОС — только в Android-приложении (Termux/proot, QEMU).");
+  } else if (cmd === "date") {
+    termPrint("\n" + new Date().toString());
+  } else if (cmd === "echo") {
+    termPrint("\n" + raw.slice(5));
+  } else if (cmd === "clear") {
+    $("termOut").textContent = "";
+  } else {
+    termPrint("\n"+cmd+": команда не найдена (демо-shell; полная консоль — в приложении)");
+  }
+}
+
+/* ---------- AI ---------- */
+var chat = load("vp_chat", []);
+function renderChat(){
+  var box = $("chatBox"); box.innerHTML = "";
+  if (!chat.length) box.innerHTML = '<div class="msg">ИИ: введите ключ (OpenRouter) и задайте вопрос — например: «напиши скрипт бэкапа для Termux»</div>';
+  chat.forEach(function(m){
+    var el = document.createElement("div");
+    el.className = "msg" + (m.role === "user" ? " me" : "");
+    el.textContent = (m.role === "user" ? "Вы: " : "ИИ: ") + m.content;
+    box.appendChild(el);
+  });
+  box.scrollTop = 1e9;
+}
+renderChat();
+async function aiSend(){
+  var text = $("aiIn").value.trim(); if (!text) return;
+  var key = $("aiKey").value.trim();
+  var model = $("aiModel").value.trim() || "mistralai/mistral-small-latest";
+  if (key) save("vp_ai_key", key);
+  else key = load("vp_ai_key", "");
+  chat.push({ role:"user", content:text }); renderChat();
+  $("aiIn").value = "";
+  if (!key) { chat.push({ role:"assistant", content:"Задайте API-ключ выше (хранится только в вашем браузере)." }); renderChat(); return; }
+  var msgs = [{ role:"system", content:"Ты — ИИ-ассистент виртуального телефона VPhone Hub. Отвечай кратко и по делу." }]
+    .concat(chat.map(function(m){ return { role:m.role, content:m.content }; }));
+  try {
+    var res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+key },
+      body:JSON.stringify({ model:model, messages:msgs })
+    });
+    var data = await res.json();
+    var reply = (data.choices && data.choices[0]) ? data.choices[0].message.content
+      : ("Ошибка: " + JSON.stringify(data).slice(0, 180));
+    chat.push({ role:"assistant", content:reply });
+  } catch(e) {
+    chat.push({ role:"assistant", content:"Ошибка сети или API: " + e.message });
+  }
+  save("vp_chat", chat.slice(-30));
+  renderChat();
+}
+
+/* ---------- Accounts ---------- */
+var accs = load("vp_acc", []);
+function renderAccs(){
+  var box = $("accList"); box.innerHTML = "";
+  if (!accs.length) box.innerHTML = '<div class="card"><div class="s">Аккаунтов нет. Пароли не храним — только metadata подключения.</div></div>';
+  accs.forEach(function(a, i){
+    var el = document.createElement("div");
+    el.className = "card";
+    el.innerHTML = '<div class="row"><div><div class="t">'+a.label+' <span class="badge">'+a.type+'</span></div>'+
+      '<div class="s">'+a.login+'</div></div>'+
+      '<button class="btn sm danger" onclick="delAcc('+i+')">✕</button></div>';
+    box.appendChild(el);
+  });
+}
+function addAcc(){
+  if (!$("accLogin").value.trim()) return;
+  accs.push({ type:$("accType").value.trim()||"account", label:$("accLabel").value.trim()||"Без имени", login:$("accLogin").value.trim() });
+  save("vp_acc", accs);
+  $("accType").value = ""; $("accLabel").value = ""; $("accLogin").value = "";
+  renderAccs();
+}
+function delAcc(i){ accs.splice(i,1); save("vp_acc", accs); renderAccs(); }
+
+/* ---------- Automations ---------- */
+var autos = load("vp_auto", []);
+function renderAutos(){
+  var box = $("autoList"); box.innerHTML = "";
+  if (!autos.length) box.innerHTML = '<div class="card"><div class="s">Правил нет.</div></div>';
+  autos.forEach(function(a, i){
+    var el = document.createElement("div");
+    el.className = "card";
+    el.innerHTML = '<div class="row"><div><div class="t">'+a.name+' · каждые '+a.intervalMin+' мин</div>'+
+      '<div class="s">$ '+a.command+'</div></div>'+
+      '<button class="btn sm danger" onclick="delAuto('+i+')">✕</button></div>';
+    box.appendChild(el);
+  });
+}
+function addAuto(){
+  if (!$("autoCmd").value.trim()) return;
+  autos.push({ name:$("autoName").value.trim()||"Автоматизация", command:$("autoCmd").value.trim(), intervalMin:parseInt($("autoMin").value||"60") });
+  save("vp_auto", autos);
+  $("autoName").value = ""; $("autoCmd").value = "";
+  renderAutos();
+}
+function delAuto(i){ autos.splice(i,1); save("vp_auto", autos); renderAutos(); }
+
+renderVms(); renderAccs(); renderAutos();
+</script>
+</body>
+</html>
