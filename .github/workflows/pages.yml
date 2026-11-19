@@ -24,6 +24,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Download built-in OS images
+        run: |
+          mkdir -p docs/images
+          curl -fsSL --retry 3 -o docs/images/alpine.iso \
+            https://dl-cdn.alpinelinux.org/alpine/v3.19/releases/x86_64/alpine-virt-3.19.9-x86_64.iso
+          ( curl -fsSL --retry 3 -o docs/images/tinycore.iso http://tinycorelinux.net/15.x/x86/release/Core-current.iso \
+            || curl -fsSL --retry 3 -o docs/images/tinycore.iso http://tinycorelinux.net/14.0/x86/release/Core-current.iso \
+            || curl -fsSL --retry 3 -o docs/images/tinycore.iso http://tinycorelinux.net/13.0/x86/release/Core-current.iso \
+            || echo "WARN: tinycore download failed" )
+          curl -fsSL --retry 3 -o /tmp/fd12floppy.zip \
+            https://archive.org/download/FD12FLOPPY/FD12FLOPPY.zip
+          unzip -j -o /tmp/fd12floppy.zip -d /tmp/fd12floppy
+          first=$(find /tmp/fd12floppy -maxdepth 1 \( -name '*.img' -o -name '*.ima' -o -name '*.vfd' \) | head -1)
+          if [ -n "$first" ]; then cp "$first" docs/images/freedos.img; else echo "WARN: no floppy image found in zip"; fi
+          curl -fsSL --retry 3 -o docs/images/android.iso \
+            https://archive.org/download/android-x86-1.6-r2/android-x86-1.6-r2.iso
+          ls -la docs/images
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
@@ -37,4 +55,3 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
-# redeploy trigger

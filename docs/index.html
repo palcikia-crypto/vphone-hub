@@ -94,7 +94,7 @@
 
       <div id="screen-vm" class="screen">
         <h2>🖥 Виртуальные машины <button class="back" onclick="show('home')">←</button></h2>
-        <div class="warnbox">Здесь управление профилями ВМ. Реальный запуск: 💽 Эмулятор x86 (v86) или Android-приложение (Termux-движок).</div>
+        <div class="warnbox">Здесь управление профилями ВМ. Реальный запуск: 💽 Эмулятор x86 (v86) — готовые образы уже встроены — или Android-приложение (Termux-движок).</div>
         <div id="vmlist"></div>
         <h2 style="margin-top:14px">Новая ВМ</h2>
         <label>Название</label>
@@ -124,19 +124,27 @@
 
       <div id="screen-emu" class="screen">
         <h2>💽 Эмулятор x86 (v86) <button class="back" onclick="show('home')">←</button></h2>
-        <div class="warnbox">Реальная эмуляция x86 на WebAssembly: загрузите ISO/IMG с вашего устройства (Linux, FreeDOS, Windows 9x/2000) — ОС запустится прямо во вкладке. Держите образ до ~700 МБ, эмуляция медленная — это свойство WASM.</div>
+        <div class="warnbox">Внутри панели уже лежат готовые образы ОС — ничего скачивать на устройство не нужно: выберите систему из списка и нажмите Запустить. Можно подать и свой ISO/IMG. Эмуляция x86 на WebAssembly без KVM/GPU — медленная, поэтому современный Android-x86 или Windows 7+ в браузере не запустятся; включён Android-x86 1.6 («Донат») как эксперимент.</div>
         <div id="emuScreenBox" style="background:#000; border-radius:8px; min-height:120px; margin-bottom:8px">
           <div id="emuText" style="white-space:pre; font:10px/10px monospace; color:#C9F0D0; display:none"></div>
           <canvas id="emuCanvas" style="display:none; width:100%"></canvas>
         </div>
         <div id="emuStatus" style="color:var(--muted); font-size:12px; margin-bottom:6px">Эмулятор не запущен. Кликните по экрану, чтобы захватить клавиатуру.</div>
-        <label>Образ ОС с вашего устройства</label>
+        <label>Готовая ОС (образ уже в панели)</label>
+        <select id="emuPreset" onchange="emuPresetChange()">
+          <option value="">— свой файл с устройства —</option>
+          <option value="images/freedos.img">FreeDOS 1.2 — DOS-командная строка, 1.5 МБ</option>
+          <option value="images/tinycore.iso">TinyCore Linux — графический рабочий стол, 24 МБ</option>
+          <option value="images/alpine.iso">Alpine Linux 3.19 — терминал + apk, 61 МБ</option>
+          <option value="images/android.iso">Android-x86 1.6 — ЭКСПЕРИМЕНТ, 55 МБ</option>
+        </select>
+        <label>…или свой образ с устройства</label>
         <input type="file" id="emuFile" accept=".iso,.img,.bin,.vhd">
         <div class="grid2">
           <div><label>Память, МБ</label>
             <select id="emuMem"><option>32</option><option selected>64</option><option>128</option><option>256</option></select></div>
-          <div><label>Тип образа</label>
-            <select id="emuKind"><option value="cdrom">ISO (CD-ROM)</option><option value="hda">IMG (диск)</option></select></div>
+          <div><label>Тип своего образа</label>
+            <select id="emuKind"><option value="cdrom">ISO (CD-ROM)</option><option value="hda">IMG (диск)</option><option value="floppy">IMG (флоппи)</option></select></div>
         </div>
         <div style="margin-top:10px; display:flex; gap:6px">
           <button class="btn" onclick="emuStart()">▶ Запустить</button>
@@ -197,7 +205,7 @@
     <h3>Возможности</h3>
     <ul>
       <li>Создание ВМ: тип ОС, RAM до 8 ГБ, ядра, диск</li>
-      <li>💽 Реальный запуск x86-ОС во вкладке (v86): свой ISO/IMG — Linux, FreeDOS, Windows</li>
+      <li>💽 Готовые ОС уже внутри панели (v86): FreeDOS, TinyCore, Alpine, Android-x86 1.6 (эксп.) + свой ISO/IMG</li>
       <li>Демо-shell: команды help, vm list, vm start, sysinfo…</li>
       <li>ИИ-чат через OpenAI-совместимый API (ключ — только локально)</li>
       <li>Аккаунты и почта — реестр подключений</li>
@@ -205,7 +213,11 @@
     </ul>
     <h3>Ограничения браузера</h3>
     Эмулятор v86 запускает настоящие x86-ОС программной эмуляцией — без аппаратной
-    виртуализации это медленно, и образ нужно подать с вашего устройства.
+    виртуализации это медленно. Хорошая новость: образы готовых систем (FreeDOS, TinyCore,
+    Alpine, Android-x86 1.6) уже встроены в саму панель и лежат на GitHub Pages — ничего
+    скачивать не нужно. Но пределы WASM честны: современный Android-x86, Windows 7+ и
+    тяжёлые графические системы в браузере не запустятся; полноценный Android — это само
+    Android-приложение VPhone Hub + его Termux-движок.
     Android-x86 так не запускается (слишком тяжёл). Полноценный Linux-движок —
     Android-приложение из репозитория.
     <h3>Данные</h3>
@@ -405,6 +417,12 @@ function delAuto(i){ autos.splice(i,1); save("vp_auto", autos); renderAutos(); }
 var emulator = null;
 var V86_JS = "https://cdn.jsdelivr.net/npm/v86@0.5.473/build/libv86.js";
 var V86_WASM = "https://cdn.jsdelivr.net/npm/v86@0.5.473/build/v86.wasm";
+var EMU_PRESETS = {
+  "images/freedos.img":  { kind: "floppy", mem: 32, name: "FreeDOS 1.2" },
+  "images/tinycore.iso": { kind: "cdrom", mem: 64, name: "TinyCore Linux" },
+  "images/alpine.iso":   { kind: "cdrom", mem: 128, name: "Alpine Linux 3.19" },
+  "images/android.iso":  { kind: "cdrom", mem: 256, name: "Android-x86 1.6 (эксперимент)" }
+};
 function emuStatus(t){ $("emuStatus").textContent = t; }
 function loadScript(src, ok, fail){
   var s = document.createElement("script");
@@ -413,10 +431,31 @@ function loadScript(src, ok, fail){
   s.onerror = function(){ fail && fail(); };
   document.head.appendChild(s);
 }
+function emuPresetChange(){
+  var u = $("emuPreset").value, p = EMU_PRESETS[u];
+  if (p) {
+    $("emuMem").value = String(p.mem);
+    if (u === "images/android.iso") {
+      emuStatus("Android-x86 1.6 (2009) — экспериментальная сборка. Современный Android в браузере не запустится (нужен KVM/GPU); полноценный Android — это само приложение.");
+    } else {
+      emuStatus("Выбрано: " + p.name + ". Нажмите ▶ Запустить — образ подтянется прямо с этой страницы, скачивать ничего не нужно.");
+    }
+  }
+}
 function emuStart(){
   if (emulator) emuStop();
+  var preset = $("emuPreset").value;
+  var p = EMU_PRESETS[preset];
   var f = $("emuFile").files[0];
-  if (!f) { emuStatus("Сначала выберите образ (ISO/IMG) с вашего устройства."); return; }
+  var kind, medium, label;
+  if (p) {
+    kind = p.kind; medium = { url: preset }; label = p.name;
+  } else if (f) {
+    kind = $("emuKind").value; medium = { buffer: f }; label = f.name;
+  } else {
+    emuStatus("Выберите готовую ОС из списка — или подайте свой ISO/IMG.");
+    return;
+  }
   emuStatus("Загрузка ядра эмулятора (v86 ~2 МБ)…");
   loadScript(V86_JS, function(){
     var Ctor = window.V86Starter || window.V86;
@@ -428,7 +467,7 @@ function emuStart(){
       screen_container: $("emuScreenBox"),
       autostart: true
     };
-    opts[$("emuKind").value] = { buffer: f };
+    opts[kind] = medium;
     try {
       emulator = new Ctor(opts);
       emulator.add_listener("emulator-ready", function(){
@@ -437,7 +476,7 @@ function emuStart(){
       emulator.add_listener("download-error", function(e){
         emuStatus("Ошибка образа: " + ((e && e.file_name) || "неизвестно"));
       });
-      emuStatus("Старт: BIOS → загрузка вашего образа…");
+      emuStatus("Старт: BIOS → загрузка " + label + "…");
     } catch(e) {
       emuStatus("Ошибка запуска: " + e.message);
     }
