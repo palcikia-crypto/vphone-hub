@@ -83,6 +83,7 @@
         <div class="home-title">VPhone Hub · главное</div>
         <div class="grid">
           <div class="app" onclick="show('vm')"><div class="ico">🖥</div><div class="lbl">Виртуальные машины</div></div>
+          <div class="app" onclick="show('emu')"><div class="ico">💽</div><div class="lbl">Эмулятор x86</div></div>
           <div class="app" onclick="show('term')"><div class="ico">⌨️</div><div class="lbl">Терминал</div></div>
           <div class="app" onclick="show('ai')"><div class="ico">🤖</div><div class="lbl">ИИ-ассистент</div></div>
           <div class="app" onclick="show('acc')"><div class="ico">👤</div><div class="lbl">Аккаунты</div></div>
@@ -93,7 +94,7 @@
 
       <div id="screen-vm" class="screen">
         <h2>🖥 Виртуальные машины <button class="back" onclick="show('home')">←</button></h2>
-        <div class="warnbox">Браузер не может запустить реальную ОС — здесь управление профилями и демонстрация. Полный запуск — в Android-приложении (Termux-движок).</div>
+        <div class="warnbox">Здесь управление профилями ВМ. Реальный запуск: 💽 Эмулятор x86 (v86) или Android-приложение (Termux-движок).</div>
         <div id="vmlist"></div>
         <h2 style="margin-top:14px">Новая ВМ</h2>
         <label>Название</label>
@@ -118,6 +119,28 @@
         <div class="termrow">
           <input id="termIn" placeholder="команда…" style="font-family:ui-monospace,monospace" onkeydown="if(event.key==='Enter')runTerm()">
           <button class="btn" onclick="runTerm()">▶</button>
+        </div>
+      </div>
+
+      <div id="screen-emu" class="screen">
+        <h2>💽 Эмулятор x86 (v86) <button class="back" onclick="show('home')">←</button></h2>
+        <div class="warnbox">Реальная эмуляция x86 на WebAssembly: загрузите ISO/IMG с вашего устройства (Linux, FreeDOS, Windows 9x/2000) — ОС запустится прямо во вкладке. Держите образ до ~700 МБ, эмуляция медленная — это свойство WASM.</div>
+        <div id="emuScreenBox" style="background:#000; border-radius:8px; min-height:120px; margin-bottom:8px">
+          <div id="emuText" style="white-space:pre; font:10px/10px monospace; color:#C9F0D0; display:none"></div>
+          <canvas id="emuCanvas" style="display:none; width:100%"></canvas>
+        </div>
+        <div id="emuStatus" style="color:var(--muted); font-size:12px; margin-bottom:6px">Эмулятор не запущен. Кликните по экрану, чтобы захватить клавиатуру.</div>
+        <label>Образ ОС с вашего устройства</label>
+        <input type="file" id="emuFile" accept=".iso,.img,.bin,.vhd">
+        <div class="grid2">
+          <div><label>Память, МБ</label>
+            <select id="emuMem"><option>32</option><option selected>64</option><option>128</option><option>256</option></select></div>
+          <div><label>Тип образа</label>
+            <select id="emuKind"><option value="cdrom">ISO (CD-ROM)</option><option value="hda">IMG (диск)</option></select></div>
+        </div>
+        <div style="margin-top:10px; display:flex; gap:6px">
+          <button class="btn" onclick="emuStart()">▶ Запустить</button>
+          <button class="btn ghost" onclick="emuStop()">■ Стоп</button>
         </div>
       </div>
 
@@ -174,14 +197,17 @@
     <h3>Возможности</h3>
     <ul>
       <li>Создание ВМ: тип ОС, RAM до 8 ГБ, ядра, диск</li>
+      <li>💽 Реальный запуск x86-ОС во вкладке (v86): свой ISO/IMG — Linux, FreeDOS, Windows</li>
       <li>Демо-shell: команды help, vm list, vm start, sysinfo…</li>
       <li>ИИ-чат через OpenAI-совместимый API (ключ — только локально)</li>
       <li>Аккаунты и почта — реестр подключений</li>
       <li>Автоматизации — правила «команда + интервал»</li>
     </ul>
     <h3>Ограничения браузера</h3>
-    Полноценная ОС (Android/Windows) внутри вкладки браузера невозможна — нет
-    доступа к виртуализации. Настоящий запуск — Android-приложение из репозитория.
+    Эмулятор v86 запускает настоящие x86-ОС программной эмуляцией — без аппаратной
+    виртуализации это медленно, и образ нужно подать с вашего устройства.
+    Android-x86 так не запускается (слишком тяжёл). Полноценный Linux-движок —
+    Android-приложение из репозитория.
     <h3>Данные</h3>
     ВМ, аккаунты и ключи хранятся в localStorage этого браузера.
   </div>
@@ -374,6 +400,53 @@ function addAuto(){
   renderAutos();
 }
 function delAuto(i){ autos.splice(i,1); save("vp_auto", autos); renderAutos(); }
+
+/* ---------- Эмулятор v86 ---------- */
+var emulator = null;
+var V86_JS = "https://cdn.jsdelivr.net/npm/v86@0.5.473/build/libv86.js";
+var V86_WASM = "https://cdn.jsdelivr.net/npm/v86@0.5.473/build/v86.wasm";
+function emuStatus(t){ $("emuStatus").textContent = t; }
+function loadScript(src, ok, fail){
+  var s = document.createElement("script");
+  s.src = src;
+  s.onload = ok;
+  s.onerror = function(){ fail && fail(); };
+  document.head.appendChild(s);
+}
+function emuStart(){
+  if (emulator) emuStop();
+  var f = $("emuFile").files[0];
+  if (!f) { emuStatus("Сначала выберите образ (ISO/IMG) с вашего устройства."); return; }
+  emuStatus("Загрузка ядра эмулятора (v86 ~2 МБ)…");
+  loadScript(V86_JS, function(){
+    var Ctor = window.V86Starter || window.V86;
+    if (!Ctor) { emuStatus("v86 недоступен (CDN не отвечает)."); return; }
+    var opts = {
+      wasm_path: V86_WASM,
+      memory_size: parseInt($("emuMem").value, 10) * 1024 * 1024,
+      vga_memory_size: 8 * 1024 * 1024,
+      screen_container: $("emuScreenBox"),
+      autostart: true
+    };
+    opts[$("emuKind").value] = { buffer: f };
+    try {
+      emulator = new Ctor(opts);
+      emulator.add_listener("emulator-ready", function(){
+        emuStatus("Система запущена. Клик по экрану = клавиатура/мышь внутри ВМ.");
+      });
+      emulator.add_listener("download-error", function(e){
+        emuStatus("Ошибка образа: " + ((e && e.file_name) || "неизвестно"));
+      });
+      emuStatus("Старт: BIOS → загрузка вашего образа…");
+    } catch(e) {
+      emuStatus("Ошибка запуска: " + e.message);
+    }
+  }, function(){ emuStatus("Не удалось загрузить v86 — проверьте соединение/блокировщики."); });
+}
+function emuStop(){
+  if (emulator) { try { emulator.destroy(); } catch(e) {} emulator = null; }
+  emuStatus("Эмулятор остановлен.");
+}
 
 renderVms(); renderAccs(); renderAutos();
 </script>
